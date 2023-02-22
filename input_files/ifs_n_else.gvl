@@ -1,0 +1,33 @@
+if 10 == 3 {
+    println ougka
+}
+
+if b > a {
+    a = b + 1
+    if a > b {
+        b = a + 1
+    }
+    else {
+        println("else1")
+        a = 5432 - 12
+        var d = b * a - 1
+    }
+    a = a - 1
+        if {
+            b = 0
+            a = 1
+        }
+
+}
+
+if 1 == 2 {
+    println "not"
+}
+else {
+    if 2 == 3 {
+        println "not 1"
+    }
+    else {
+        println "yes"
+    }
+}

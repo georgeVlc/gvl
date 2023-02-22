@@ -1,0 +1,4 @@
+var         a = 12 + 3
+var     b           =       1 + 2
+var c = a + b
+var d = f + a

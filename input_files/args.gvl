@@ -1,0 +1,8 @@
+var i = 0
+var limit = array_len $ARGS
+
+while i < limit {
+    var arg = array_at $ARGS i
+    println arg
+    i = i + 1
+}

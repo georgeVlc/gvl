@@ -1,0 +1,6 @@
+var a = 12
+const pi = 3.14
+a = pi + 1
+var b = a * 3
+const pi = 0.0
+pi = 48.3

@@ -1,0 +1,27 @@
+var x = 0
+var y = 0
+
+readint x y
+
+if x > y {
+    println x
+}
+if y >= x {
+    println y
+}
+
+var[] a = []
+var i = 0
+var limit = 5
+
+while i < limit {
+    var element = 0
+
+    print Enter int:
+    readint element
+    
+    print nl
+    
+    array_append a element
+    i = i + 1
+}

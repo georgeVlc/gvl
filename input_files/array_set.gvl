@@ -1,0 +1,15 @@
+var[] a = [ 1 2 3 ]
+
+var value = 12.3
+
+var idx = 1
+
+array_set a idx value
+
+var[] b = [ a 9 ]
+
+idx = 0
+
+var[] c = [ 0 0 ]
+
+array_set b idx c 

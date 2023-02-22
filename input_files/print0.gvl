@@ -1,0 +1,14 @@
+var a = 12
+const pi = 3.14
+a = pi + 1
+var b = a * 3
+const pi = 0.0
+pi = 48.3
+
+
+print a b pi
+print \n
+a = 0
+println a b pi
+print a \n
+print b

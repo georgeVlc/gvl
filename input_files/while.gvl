@@ -1,0 +1,21 @@
+var x = 10
+var y = 20
+
+var i = 0
+while i < y {
+    println i
+    i = i + y
+    i = i - x
+
+    var o = 0.99
+    if 3 > 2 {
+        var xxx = 69
+        println xxx
+    }
+
+    var z = 0
+    while z < 3 {
+        println var_z = z
+        z = z + 1
+    }
+}

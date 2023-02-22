@@ -1,0 +1,45 @@
+var x = 10
+var y = 50
+const pi = 3.14
+var d = 4.85
+
+var[] arr = [ x y pi ]
+var[] arr2 = [ arr d ]
+var[] arr3 = [ arr arr2 pi ]
+var[] arr4 = [ 1 2 3 ]
+var[] arr5 = [ x x x ]
+
+if 3 > 2 {
+    var z = 98
+    println z
+    
+    var[] tmp = [ z 0 ]
+}
+
+var result1 = array_at arr 2 
+println result1
+
+var[] result2 = array_at arr2 0
+var tmp = array_at result2 0
+println tmp
+
+
+var len = array_len arr3
+println len
+
+var prev = array_len arr
+println prev
+
+array_append arr 420
+
+var curr = array_len arr
+println curr
+
+var new_element = array_at arr 3
+println new_element
+
+var[] t1 = [ 10 30 50 ]
+var[] t2 = [ 90 100 t1 ]
+var t3 = array_pop t1
+array_pop t1
+array_pop t2

@@ -1,0 +1,40 @@
+    var     a   = 10
+a   = 10        + 1
+var b = a + 3
+var c = "Nothing\wYet"
+readstr c
+print a b c
+
+if 10 == 3 {
+    println ougka
+}
+
+if b > a {
+    a = b + 1
+    if a > b {
+        b = a + 1
+    }
+    a = a - 1
+        if {
+            b = 0
+            a = 1
+        }
+}
+
+var x = 12
+var y = x * 2
+var z = y + 3
+const pi = 3.14
+
+if y >= x {
+    println "y > x"
+    x = 2 * y
+
+    if z > x {
+        z = y * x
+        if x > z {
+            x = 0
+            y = 0
+        }
+    }
+}

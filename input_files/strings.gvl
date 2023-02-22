@@ -1,0 +1,7 @@
+var str1 = "Hello World"
+var str2 = str1
+var str3 = "Hi"
+var str4 = "A B C D EF G"
+
+println str1 str2
+println str3 str4

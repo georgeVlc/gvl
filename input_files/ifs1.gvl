@@ -1,0 +1,33 @@
+var a = 12
+const pi = 3.14
+
+a = pi + 1
+
+var b = a * 3
+
+const pi = 0.0
+pi = 48.3
+
+if a < 12 {
+    println a < 12
+}
+
+if a > b {
+    println a > b
+}
+
+if b > a {
+    println b > a
+    var d = 4444.4
+    println b
+    println var_d == d
+    
+    if b > 10 {
+        println b > 13
+    }
+}
+
+var x = 25
+var y = x + 5
+var cond = true
+println var_d == d
