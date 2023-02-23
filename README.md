@@ -11,4 +11,4 @@ Supported data types include: int, float, array
 
 In order to initialize a variable or an array the user doesn't declare the type but simple uses the keyword 'var' ('var[]' in the case of an array init), followed by the variable/array name and some sort of value (to avoid invalid read/writes, ensure correct use and avoid type conflicts).
 
-More examples will be added once the project is relatively finished, but for now all the '.gvl' files in input_files/ demonstrates valid gvl code.
+Examples will be added once the project is relatively finished, but for now all the '.gvl' files in input_files/ demonstrate valid gvl code.
