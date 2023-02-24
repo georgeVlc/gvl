@@ -51,6 +51,8 @@ namespace gvl
 
             inline const Calculator& get_calculator() const { return calculator; }
 
+            inline const std::unordered_map<TokenSv, char> get_format_keywords() const { return format_keywords; }
+
             void print_vars() const;
 
         private:
@@ -80,6 +82,7 @@ namespace gvl
             static VarLikeMap variables;
             static std::array<Token, args_max_num> args;
             static std::size_t block_lvl;
+            static std::unordered_map<TokenSv, char> format_keywords;
 
             std::vector<TokenSv> tmp_var_names;
             Calculator calculator;

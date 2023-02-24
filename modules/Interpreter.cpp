@@ -9,25 +9,46 @@
 #include <cassert>
 
 
+std::ostream& operator<<(std::ostream& out, const gvl::VarLikeType type)
+{
+    static std::map<gvl::VarLikeType, std::string> strings;
+    if (strings.size() == 0)
+    {
+        #define INSERT_ELEMENT(p) strings[p] = #p
+                INSERT_ELEMENT(gvl::VarLikeType::BOOL);     
+                INSERT_ELEMENT(gvl::VarLikeType::DOUBLE);     
+                INSERT_ELEMENT(gvl::VarLikeType::INT);
+                INSERT_ELEMENT(gvl::VarLikeType::STRING);
+                INSERT_ELEMENT(gvl::VarLikeType::ARRAY);             
+                INSERT_ELEMENT(gvl::VarLikeType::NONE);                
+        #undef INSERT_ELEMENT
+    }   
+
+    return out << strings[type];
+}
+
+
 gvl::Interpreter::VarLikeMap gvl::Interpreter::variables;
+
 std::array<gvl::Token, gvl::args_max_num> gvl::Interpreter::args;
+
 std::size_t gvl::Interpreter::block_lvl = 0;
+
+std::unordered_map<gvl::TokenSv, char> gvl::Interpreter::format_keywords = { 
+    std::pair<gvl::TokenSv, char>("nl", '\n'),
+    std::pair<gvl::TokenSv, char>("tab", '\t'),
+    std::pair<gvl::TokenSv, char>("space", ' ')
+};
 
 
 static gvl::VarLikeType get_varlike_type(gvl::TokenSv sv)
 {
-    const auto& non_alpha = 
-        std::find_if(sv.begin(), sv.end(), [](char c) { return !std::isalpha(c) && !std::isspace(c); });
-
     using namespace std::string_view_literals;
 
-    if (non_alpha == sv.end())
-    {
-        if (sv.compare("true"sv) == 0 || sv.compare("false"sv) == 0)
-            return gvl::VarLikeType::BOOL;
-        else
-            return gvl::VarLikeType::STRING;
-    }
+    if (sv.starts_with('\''))
+        return gvl::VarLikeType::STRING;
+    else if (sv.compare("true"sv) == 0 || sv.compare("false"sv) == 0)
+        return gvl::VarLikeType::BOOL;
     else
     {
         const auto& non_digit =
@@ -49,24 +70,6 @@ static gvl::VarLikeType get_varlike_type(gvl::TokenSv sv)
     }
 
     return gvl::VarLikeType::NONE;
-}
-
-std::ostream& operator<<(std::ostream& out, const gvl::VarLikeType type)
-{
-    static std::map<gvl::VarLikeType, std::string> strings;
-    if (strings.size() == 0)
-    {
-        #define INSERT_ELEMENT(p) strings[p] = #p
-                INSERT_ELEMENT(gvl::VarLikeType::BOOL);     
-                INSERT_ELEMENT(gvl::VarLikeType::DOUBLE);     
-                INSERT_ELEMENT(gvl::VarLikeType::INT);
-                INSERT_ELEMENT(gvl::VarLikeType::STRING);
-                INSERT_ELEMENT(gvl::VarLikeType::ARRAY);             
-                INSERT_ELEMENT(gvl::VarLikeType::NONE);                
-        #undef INSERT_ELEMENT
-    }   
-
-    return out << strings[type];
 }
 
 static void print_array_elements(const auto& array_elements, const gvl::Interpreter::VarLikeMap& vmap)
@@ -99,7 +102,6 @@ void gvl::Interpreter::print_vars() const
             print_array_elements(varlike.array_elements, this->variables);
             std::cout << "]"sv;
         }
-        
         std::cout << "\n"sv;
     }
     
@@ -109,11 +111,7 @@ static gvl::Token get_varlike_value(const gvl::Interpreter interpreter, gvl::Tok
 {
     gvl::Token result;
 
-    try {
-        result = interpreter.get_var_map().at(sv).value;
-    } catch (std::out_of_range&) {
-        result = sv;  
-    }
+    try { result = interpreter.get_var_map().at(sv).value; } catch (std::out_of_range&) { result = sv; }
 
     return result;
 }
@@ -125,18 +123,38 @@ struct ExpressionEvaluation
     std::vector<gvl::Token> array_values;
 };
 
-static ExpressionEvaluation evaluate_expression(const gvl::Interpreter& interpreter, 
-    const gvl::Statement& stmt, gvl::VarLikeType known_type=gvl::VarLikeType::NONE)
+static std::pair<gvl::Token, gvl::VarLikeType> get_value_and_type(gvl::TokenSv tokenSv, const gvl::Interpreter& interpreter)
+{
+    std::pair<gvl::Token, gvl::VarLikeType> pair;
+
+    try 
+    {
+        gvl::VarLike vl = interpreter.get_var_map().at(tokenSv);
+        pair.second = vl.type;
+        pair.first = vl.value;
+    } 
+    catch (const std::out_of_range&) 
+    { 
+        pair.second = get_varlike_type(tokenSv);
+        
+        if (interpreter.get_format_keywords().contains(tokenSv))
+            pair.first = interpreter.get_format_keywords().at(tokenSv);
+        else
+            pair.first = tokenSv;
+    }
+
+    return pair;
+}
+
+static ExpressionEvaluation evaluate_expression(const gvl::Interpreter& interpreter, const gvl::Statement& stmt)
 {
     using namespace std::string_view_literals;
-    using gvl::VarLikeType;
-    using gvl::Token;
-    using gvl::TokenSv;
+    using namespace gvl;
 
     Token l, r, tmp, result, index;
     ExpressionEvaluation expreval;    
         
-
+        
     if (stmt.expression.left.compare("array_at"sv) == 0)
     {
         index = get_varlike_value(interpreter, stmt.expression.right);
@@ -144,7 +162,8 @@ static ExpressionEvaluation evaluate_expression(const gvl::Interpreter& interpre
         result = interpreter.get_var_map().at
         (stmt.expression.middle).array_elements.at(std::stoi(index));
 
-        try {
+        try 
+        {
             const auto& array_elements = interpreter.get_var_map().at(result).array_elements;
             if (!array_elements.empty())
             {
@@ -153,7 +172,8 @@ static ExpressionEvaluation evaluate_expression(const gvl::Interpreter& interpre
                     expreval.array_values.push_back(element);
             }
 
-        } catch (std::out_of_range&) { expreval.type = get_varlike_type(result); }
+        } 
+        catch (std::out_of_range&) { expreval.type = get_varlike_type(result); }
         
         expreval.result = result;
         return expreval;
@@ -175,7 +195,8 @@ static ExpressionEvaluation evaluate_expression(const gvl::Interpreter& interpre
         expreval.result = back;
         expreval.type = get_varlike_type(back);
 
-        try {
+        try 
+        {
             const std::vector<Token>& elements = interpreter.get_var_map().at(back).array_elements;
             expreval.type = VarLikeType::ARRAY;
 
@@ -185,37 +206,42 @@ static ExpressionEvaluation evaluate_expression(const gvl::Interpreter& interpre
                 const_cast<std::vector<Token>&> (elements).pop_back();
 
             }
-        } catch (std::out_of_range&) { const_cast<std::vector<Token>&> (varlike.array_elements).pop_back(); }
+        } 
+        catch (std::out_of_range&) { const_cast<std::vector<Token>&> (varlike.array_elements).pop_back(); }
 
         return expreval;
     }
 
-    result = get_varlike_value(interpreter, stmt.expression.left);
+    VarLike vl_left, vl_right;
+    VarLikeType l_type = VarLikeType::NONE, r_type = VarLikeType::NONE;
 
-    if (!result.empty())
-        l = result;
-    else
-        l = stmt.expression.left;
+    std::pair<Token, VarLikeType> pair = get_value_and_type(stmt.expression.left, interpreter);
+    l_type = pair.second;
+    l = pair.first;
 
-    result = get_varlike_value(interpreter, stmt.expression.right);
+    pair = get_value_and_type(stmt.expression.right, interpreter);
 
-    if (!result.empty())
-        r = result;
-    else
-        r = stmt.expression.right;
+    r_type = pair.second;
+    r = pair.first;
 
-    VarLikeType l_type = get_varlike_type(l);
     assert(l_type != VarLikeType::NONE);
-    VarLikeType r_type = r.empty() ? VarLikeType::NONE : get_varlike_type(r);
 
-    // check if l middle r is valid
-    
     tmp = l;
-    tmp += stmt.expression.middle;
-    tmp += r;
+    if (l_type == VarLikeType::STRING)
+    {
+        if (interpreter.get_format_keywords().contains(stmt.expression.middle))
+            tmp += interpreter.get_format_keywords().at(stmt.expression.middle);
+        tmp += r;
+    }
+    else
+    {
+        tmp += stmt.expression.middle;
+        tmp += r;
+    }
 
     if (l_type == VarLikeType::STRING || r_type == VarLikeType::STRING)
     {
+        tmp.erase(std::remove(tmp.begin(), tmp.end(), '\''), tmp.end());
         expreval.result = tmp;
         expreval.type = VarLikeType::STRING;
         return expreval;
@@ -274,25 +300,21 @@ gvl::Interpreter::Error gvl::Interpreter::execute_assign(Interpreter& interprete
     VarLike& varlike = interpreter.variables.at(name);
 
     if (!varlike.is_const)
-        varlike.value = evaluate_expression(interpreter, stmt, varlike.type).result;
+        varlike.value = evaluate_expression(interpreter, stmt).result;
 
     return gvl::Interpreter::Error(); 
 }
 
-static void print_token(const gvl::Interpreter& interpreter, gvl::TokenSv token, char delim=' ')
+static void print_token(const gvl::Interpreter& interpreter, gvl::TokenSv token)
 {
     using namespace std::string_view_literals;
 
     if (interpreter.get_var_map().contains(token))
-        std::cout << interpreter.get_var_map().at(token).value << delim;
-    else if (token.starts_with("nl"sv))
-        std::cout << "\n"sv;
-    else if (token.starts_with("tabl"sv))
-        std::cout << "\t"sv;
-    else if (token.starts_with("space"sv))
-        std::cout << " "sv;
+        std::cout << interpreter.get_var_map().at(token).value;
+    else if (interpreter.get_format_keywords().contains(token))
+        std::cout << interpreter.get_format_keywords().at(token);
     else if (!token.empty())
-        std::cout << token << delim;
+        std::cout << token;
 }
 
 gvl::Interpreter::Error gvl::Interpreter::execute_print_related(Interpreter& interpreter, const Statement& stmt)
@@ -320,6 +342,7 @@ static void read_token(gvl::Interpreter& interpreter, gvl::TokenSv token)
         T value = T();
         std::cin >> value;
         const_cast<gvl::VarLike&> (interpreter.get_var_map().at(token)).value = std::to_string(value);
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max());
     }
 }
 
@@ -485,15 +508,8 @@ void gvl::Interpreter::clear_scope(gvl::Interpreter& interpreter, std::vector<To
 {
     for (const auto& var_name : var_names)
     {
-        try
-        {
-            //std::cout << "\tDeleting: " << var_name << " value: " << Interpreter::variables.at(var_name).value << std::endl;
-            Interpreter::variables.erase(var_name);  
-        }
-        catch (...)
-        {
-            //std::cout << var_name << " doesnt exist in vars\n";
-        }
+        try { Interpreter::variables.erase(var_name); }
+        catch (...) {}
     }
 
     var_names.clear();

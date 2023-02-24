@@ -1,7 +1,11 @@
-var str1 = "Hello World"
-var str2 = str1
-var str3 = "Hi"
-var str4 = "A B C D EF G"
+var str1 = 'Hello' space 'World'
+var str2 = str1 + '2'
 
-println str1 str2
-println str3 str4
+var str3 = str1
+
+str3 = str3 + space
+str3 = str3 + str2
+
+
+println str1 nl str2
+println str3
