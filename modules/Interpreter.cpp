@@ -45,7 +45,7 @@ static gvl::VarLikeType get_varlike_type(gvl::TokenSv sv)
 {
     using namespace std::string_view_literals;
 
-    if (sv.starts_with('\''))
+    if (sv.starts_with('\'') || std::count_if(sv.begin(),sv.end(),[](char c){ return !(std::isalnum(c)); }) <= 1)
         return gvl::VarLikeType::STRING;
     else if (sv.compare("true"sv) == 0 || sv.compare("false"sv) == 0)
         return gvl::VarLikeType::BOOL;

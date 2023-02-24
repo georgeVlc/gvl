@@ -4,7 +4,7 @@ MODULES = modules/
 OBJS = main.o $(MODULES)Parser.o $(MODULES)Interpreter.o
 PROGRAM = gvl
 INCLUDES = includes/
-ARGS = input_files/strings.gvl
+ARGS = input_files/strings_in_array.gvl
 
 
 $(PROGRAM): $(OBJS)

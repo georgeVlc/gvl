@@ -1,0 +1,7 @@
+var a = 'A'
+var b = 'B'
+var ab = a + b
+
+var[] strs = [ a b ab ]
+
+var element = array_at strs 2
