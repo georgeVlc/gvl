@@ -77,9 +77,6 @@ int main(int argc, char** argv)
     
     std::vector<std::string> lines(gvl::Parser::split_to_lines(iss));
     
-    //std::ranges::copy(lines, std::ostream_iterator<std::string>(std::cout, "\n"));
-    
-
     std::array<std::string, gvl::args_max_num> args;
     
     for (int i = 2; i < argc; ++i)

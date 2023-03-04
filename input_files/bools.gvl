@@ -1,0 +1,9 @@
+var f = true and false
+f = true
+f = f or false
+var f2 = f and false
+var f3 = f or f2
+
+println 'f:' space f
+println 'f2:' space f2
+println 'f3:' space f3

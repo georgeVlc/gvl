@@ -1,0 +1,39 @@
+function add : a b result {
+    result = a + b
+}
+
+function mul : a b result {
+    result = a * b
+}
+
+function diff_times_10 : a b result {
+    if b > a {
+        result = b - a
+    }
+    if a >= b {
+        result = a - b
+    }
+
+    result = result * 10
+}
+
+var x = 12
+var y = 65
+var sum = 0
+
+call add x y sum
+
+print x space '+'
+print space y space
+println = space sum
+
+var res = 0
+
+call mul x y res
+
+print x space '*'
+print space y space
+println = space res
+
+var final = 0
+call diff_times_10 x y final
