@@ -4,11 +4,10 @@ A small and simple, both dynamically and strongly typed interpreted language wri
 So far gvl supports the very basics such as variable/constant initialization, variable assignment statements, standard I/O operations, if and while statements.
 
 The language also supports the 'array' data structure which in reality is much closer to the way a python list behaves than the traditional array.
-Meaning append/pop operations and the ability to store different data types including nested arrays.
+Meaning append/pop operations and the ability to store different data types within an array including other arrays.
 
-Supported data types include: int, float, string, array 
-(there is no bool support but soon will be).
+Supported data types include: int, double, string, bool, array 
 
-In order to initialize a variable or an array the user doesn't declare the type but simple uses the keyword 'var' ('var[]' in the case of an array init), followed by the variable/array name and some sort of value (to avoid invalid read/writes, ensure correct use and avoid type conflicts).
+Examples will be added once the project is relatively finished, but for now most of the '.gvl' files in input_files/ demonstrate valid gvl code.
 
-Examples will be added once the project is relatively finished, but for now all the '.gvl' files in input_files/ demonstrate valid gvl code.
+There is no real error detection/recovery yet, as far as syntax errors and run-time errors are conserned, but i'm working on providing one using the flex&yacc combo in the future.
