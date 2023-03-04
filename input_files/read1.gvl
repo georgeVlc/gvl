@@ -17,7 +17,7 @@ var limit = 5
 while i < limit {
     var element = 0
 
-    print Enter int:
+    print 'Enter' space 'int:'
     readint element
     
     print nl
