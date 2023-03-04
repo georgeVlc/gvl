@@ -1,0 +1,8 @@
+var[] arr = array_at other 0 1 l
+var len = $array_len
+var len2 = $array_len arr
+var element = $array_pop
+var m = $array_pop arr
+var $name = 30
+
+$array_set arr 1 2

@@ -1,0 +1,13 @@
+var x = 10
+var y = 20
+
+if x > y {
+    println 'X' space 'greater'
+    y = 2
+} 
+else {
+    println 'Y' space 'greater'
+    x = y
+}
+
+println x space y

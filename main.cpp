@@ -35,6 +35,9 @@ std::ostream& operator<<(std::ostream& out, const gvl::StatementType value)
                 INSERT_ELEMENT(gvl::StatementType::ARRAY_APPEND);     
                 INSERT_ELEMENT(gvl::StatementType::ARRAY_POP);     
                 INSERT_ELEMENT(gvl::StatementType::ARRAY_SET);     
+                INSERT_ELEMENT(gvl::StatementType::DEF_FUNC);     
+                INSERT_ELEMENT(gvl::StatementType::CALL_FUNC);     
+                INSERT_ELEMENT(gvl::StatementType::RETURN);     
                 INSERT_ELEMENT(gvl::StatementType::NONE);                     
         #undef INSERT_ELEMENT
     }   
@@ -59,6 +62,15 @@ std::ostream& operator<<(std::ostream& out, const gvl::Statement& stmt)
     {
         out << "\t\t++++++++++++++++-PRINTING BODY-+++++++++++++++++\n";
         for (const auto& sub_stmt : stmt.main_body)
+        {
+            out << sub_stmt << "\n";
+        }
+    }
+
+    if (!stmt.second_body.empty())
+    {
+        out << "\t\t++++++++++++++++-PRINTING BODY-+++++++++++++++++\n";
+        for (const auto& sub_stmt : stmt.second_body)
         {
             out << sub_stmt << "\n";
         }
@@ -95,6 +107,6 @@ int main(int argc, char** argv)
     gvl::Interpreter interpreter(parser.get_parsed_program());
     interpreter.execute_program();
 
-    std::cout << "\n----------------------=END OF GVL PROGRAM EXECUTION=----------------------\n";   
+    std::cout << "----------------------=END OF GVL PROGRAM EXECUTION=----------------------\n";   
     interpreter.print_vars();
 }

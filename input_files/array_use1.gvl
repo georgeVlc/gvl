@@ -1,15 +1,15 @@
 var[] a = [ 1 2 3 ]
 var[] b = [ 10 a ]
 
-var[] c = array_at b 1
-var d = array_at c 0
+var[] c = $array_at b 1
+var d = $array_at c 0
 
 var[] big = [ a b c ]
-var[] x = array_pop big
-var[] y = array_pop big
-var[] z = array_pop big
-array_append big a
+var[] x = $array_pop big
+var[] y = $array_pop big
+var[] z = $array_pop big
+$array_append big a
 
 
-var[] array = [ 5 10 15 ]
-var element = array_at array 2
+var[] $array = [ 5 10 15 ]
+var element = $array_at $array 2

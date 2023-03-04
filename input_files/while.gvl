@@ -15,7 +15,7 @@ while i < y {
 
     var z = 0
     while z < 3 {
-        println var_z = z
+        println 'var_z' space z
         z = z + 1
     }
 }

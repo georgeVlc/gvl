@@ -6,7 +6,10 @@
 #include <iostream>
 #include <cctype>
 #include <map>
+#include <set>
 #include <cassert>
+#include <ranges>
+#include <algorithm>
 
 
 std::ostream& operator<<(std::ostream& out, const gvl::VarLikeType type)
@@ -40,15 +43,26 @@ std::unordered_map<gvl::TokenSv, char> gvl::Interpreter::format_keywords = {
     std::pair<gvl::TokenSv, char>("space", ' ')
 };
 
+std::unordered_set<std::pair<gvl::TokenSv, gvl::Statement*>, gvl::HashTokenStmtPair> gvl::Interpreter::ud_funcs;
+
+
+static bool is_number(const gvl::TokenSv& tokenSv)
+{
+    return std::find_if(tokenSv.begin(), 
+        tokenSv.end(), [](unsigned char c) { return !std::isdigit(c) && c != '.'; }) == tokenSv.end();
+}
 
 static gvl::VarLikeType get_varlike_type(gvl::TokenSv sv)
 {
     using namespace std::string_view_literals;
 
-    if (sv.starts_with('\'') || std::count_if(sv.begin(),sv.end(),[](char c){ return !(std::isalnum(c)); }) <= 1)
-        return gvl::VarLikeType::STRING;
-    else if (sv.compare("true"sv) == 0 || sv.compare("false"sv) == 0)
+    if (sv.empty())
+        return gvl::VarLikeType::NONE;
+
+    if (sv.compare("true"sv) == 0 || sv.compare("false"sv) == 0)
         return gvl::VarLikeType::BOOL;
+    else if (sv.starts_with('\'') || !is_number(sv))     // prev cond:sv.starts_with('\'') || std::count_if(sv.begin(),sv.end(),[](char c){ return !(std::isalnum(c)); }) <= 1
+        return gvl::VarLikeType::STRING;
     else
     {
         const auto& non_digit =
@@ -130,18 +144,18 @@ static std::pair<gvl::Token, gvl::VarLikeType> get_value_and_type(gvl::TokenSv t
     try 
     {
         gvl::VarLike vl = interpreter.get_var_map().at(tokenSv);
-        pair.second = vl.type;
         pair.first = vl.value;
     } 
     catch (const std::out_of_range&) 
     { 
-        pair.second = get_varlike_type(tokenSv);
         
         if (interpreter.get_format_keywords().contains(tokenSv))
             pair.first = interpreter.get_format_keywords().at(tokenSv);
         else
             pair.first = tokenSv;
     }
+
+    pair.second = get_varlike_type(pair.first);
 
     return pair;
 }
@@ -154,8 +168,8 @@ static ExpressionEvaluation evaluate_expression(const gvl::Interpreter& interpre
     Token l, r, tmp, result, index;
     ExpressionEvaluation expreval;    
         
-        
-    if (stmt.expression.left.compare("array_at"sv) == 0)
+
+    if (stmt.expression.left.compare("$array_at"sv) == 0)
     {
         index = get_varlike_value(interpreter, stmt.expression.right);
         
@@ -178,13 +192,13 @@ static ExpressionEvaluation evaluate_expression(const gvl::Interpreter& interpre
         expreval.result = result;
         return expreval;
     }
-    else if (stmt.expression.left.compare("array_len"sv) == 0)
+    else if (stmt.expression.left.compare("$array_len"sv) == 0)
     {
         expreval.result = std::to_string(interpreter.get_var_map().at(stmt.expression.middle).array_elements.size());
         expreval.type = VarLikeType::INT;
         return expreval;
     }
-    else if (stmt.expression.left.compare("array_pop"sv) == 0)
+    else if (stmt.expression.left.compare("$array_pop"sv) == 0)
     {
         const gvl::VarLike& varlike = interpreter.get_var_map().at(stmt.expression.middle);
         
@@ -219,19 +233,32 @@ static ExpressionEvaluation evaluate_expression(const gvl::Interpreter& interpre
     l_type = pair.second;
     l = pair.first;
 
-    pair = get_value_and_type(stmt.expression.right, interpreter);
-
-    r_type = pair.second;
-    r = pair.first;
+    if (!stmt.expression.right.empty())
+    {
+        pair = get_value_and_type(stmt.expression.right, interpreter);
+        r_type = pair.second;
+        r = pair.first;
+    }
 
     assert(l_type != VarLikeType::NONE);
 
     tmp = l;
+    
     if (l_type == VarLikeType::STRING)
     {
         if (interpreter.get_format_keywords().contains(stmt.expression.middle))
             tmp += interpreter.get_format_keywords().at(stmt.expression.middle);
         tmp += r;
+    }
+    else if (l_type == VarLikeType::BOOL)
+    {
+        tmp += ' ';
+        tmp += stmt.expression.middle;
+        if (!stmt.expression.right.empty())
+        {
+            tmp += ' ';
+            tmp += stmt.expression.right;
+        }
     }
     else
     {
@@ -239,17 +266,14 @@ static ExpressionEvaluation evaluate_expression(const gvl::Interpreter& interpre
         tmp += r;
     }
 
-    if (l_type == VarLikeType::STRING || r_type == VarLikeType::STRING)
+    //std::cout << "l: " << l << " l_type: " << l_type << 
+    //" r:" << r << " r_type: " << r_type << " tmp: " << tmp << "\n";
+
+    if (l_type == VarLikeType::STRING)
     {
         tmp.erase(std::remove(tmp.begin(), tmp.end(), '\''), tmp.end());
         expreval.result = tmp;
         expreval.type = VarLikeType::STRING;
-        return expreval;
-    }
-    else if (l_type == VarLikeType::BOOL || r_type == VarLikeType::BOOL)
-    {
-        expreval.result = tmp;
-        expreval.type = VarLikeType::BOOL;
         return expreval;
     }
     else
@@ -257,22 +281,36 @@ static ExpressionEvaluation evaluate_expression(const gvl::Interpreter& interpre
         Calculator calculator = interpreter.get_calculator();
         calculator.set_expression(tmp);
 
-        if (l_type == VarLikeType::INT && (r_type == VarLikeType::INT || r_type == VarLikeType::NONE))
+        if (l_type == VarLikeType::INT)
         {
-            expreval.result = std::to_string(calculator.evaluate<int>());
-            expreval.type = VarLikeType::INT;
+            if (r_type == VarLikeType::DOUBLE)
+            {
+                expreval.result = std::to_string(calculator.evaluate<double>());
+                expreval.type = VarLikeType::DOUBLE;
+            }
+            else
+            {
+                expreval.result = std::to_string(calculator.evaluate<int>());
+                expreval.type = VarLikeType::INT;
+            }
         }
-        else if (l_type == VarLikeType::DOUBLE || r_type == VarLikeType::DOUBLE)
+        else if (l_type == VarLikeType::DOUBLE)
         {
             expreval.result = std::to_string(calculator.evaluate<double>());
             expreval.type = VarLikeType::DOUBLE;
+        }
+        else if (l_type == VarLikeType::BOOL)
+        {
+            expreval.result = r.empty() ? l : calculator.evaluate_basic_bool_expression(l, r, stmt.expression.middle) ?
+                "true" : "false";
+            expreval.type = VarLikeType::BOOL;
         }
         
         return expreval;
     }
 }
 
-gvl::Interpreter::Error gvl::Interpreter::execute_init(Interpreter& interpreter, const Statement& stmt)
+gvl::Interpreter::Info gvl::Interpreter::execute_init(Interpreter& interpreter, const Statement& stmt)
 { 
     VarLike varlike;
     varlike.name = stmt.line[1];
@@ -291,10 +329,10 @@ gvl::Interpreter::Error gvl::Interpreter::execute_init(Interpreter& interpreter,
             interpreter.tmp_var_names.push_back(varlike.name);
     }
 
-    return gvl::Interpreter::Error(); 
+    return gvl::Interpreter::Info(); 
 }
 
-gvl::Interpreter::Error gvl::Interpreter::execute_assign(Interpreter& interpreter, const Statement& stmt)
+gvl::Interpreter::Info gvl::Interpreter::execute_assign(Interpreter& interpreter, const Statement& stmt)
 { 
     const Token& name = stmt.line.front();
     VarLike& varlike = interpreter.variables.at(name);
@@ -302,7 +340,8 @@ gvl::Interpreter::Error gvl::Interpreter::execute_assign(Interpreter& interprete
     if (!varlike.is_const)
         varlike.value = evaluate_expression(interpreter, stmt).result;
 
-    return gvl::Interpreter::Error(); 
+
+    return gvl::Interpreter::Info(); 
 }
 
 static void print_token(const gvl::Interpreter& interpreter, gvl::TokenSv token)
@@ -314,10 +353,15 @@ static void print_token(const gvl::Interpreter& interpreter, gvl::TokenSv token)
     else if (interpreter.get_format_keywords().contains(token))
         std::cout << interpreter.get_format_keywords().at(token);
     else if (!token.empty())
-        std::cout << token;
+    {
+        if (token.find('\'') != std::string_view::npos)
+            std::copy(token.begin() + 1, token.end() - 1, std::ostream_iterator<char>(std::cout, ""));
+        else
+            std::cout << token;
+    }
 }
 
-gvl::Interpreter::Error gvl::Interpreter::execute_print_related(Interpreter& interpreter, const Statement& stmt)
+gvl::Interpreter::Info gvl::Interpreter::execute_print_related(Interpreter& interpreter, const Statement& stmt)
 { 
     const Expression& tokens = stmt.expression;
     
@@ -330,7 +374,7 @@ gvl::Interpreter::Error gvl::Interpreter::execute_print_related(Interpreter& int
     if (stmt.type == StatementType::PRINTLN)
         std::cout << "\n"sv;
 
-    return gvl::Interpreter::Error(); 
+    return gvl::Interpreter::Info(); 
 }
 
 template <typename T>
@@ -346,7 +390,7 @@ static void read_token(gvl::Interpreter& interpreter, gvl::TokenSv token)
     }
 }
 
-gvl::Interpreter::Error gvl::Interpreter::execute_read_related(Interpreter& interpreter, const Statement& stmt)
+gvl::Interpreter::Info gvl::Interpreter::execute_read_related(Interpreter& interpreter, const Statement& stmt)
 {
     if (stmt.type == gvl::StatementType::READINT)
     {
@@ -361,32 +405,37 @@ gvl::Interpreter::Error gvl::Interpreter::execute_read_related(Interpreter& inte
         read_token<float>(interpreter, stmt.expression.right);
     }
 
-    return gvl::Interpreter::Error(); 
+    return gvl::Interpreter::Info(); 
 }
 
-gvl::Interpreter::Error gvl::Interpreter::execute_block(Interpreter& interpreter, const Statement& stmt)
+gvl::Interpreter::Info gvl::Interpreter::execute_block(Interpreter& interpreter, const Statement& stmt)
 {
-    Token left_operand, right_operand, oper;
-    TokenSv result;
+    bool is_true = stmt.type == StatementType::DEF_FUNC ? true : false;
 
-    result = get_varlike_value(interpreter, stmt.expression.left);
+    if (stmt.type != StatementType::DEF_FUNC)
+    {
+        Token left_operand, right_operand, oper;
+        TokenSv result;
 
-    if (!result.empty())
-        left_operand = result;
-    else
-        left_operand = stmt.expression.left;
-    
-    result = get_varlike_value(interpreter, stmt.expression.right);
+        result = get_varlike_value(interpreter, stmt.expression.left);
 
-    if (!result.empty())
-        right_operand = result;
-    else
-        right_operand = stmt.expression.right;
-    
-    oper = stmt.expression.middle;
+        if (!result.empty())
+            left_operand = result;
+        else
+            left_operand = stmt.expression.left;
         
-    Calculator calculator;
-    bool is_true = calculator.evaluate_basic_bool_expression<double>(left_operand, right_operand, oper);
+        result = get_varlike_value(interpreter, stmt.expression.right);
+
+        if (!result.empty())
+            right_operand = result;
+        else
+            right_operand = stmt.expression.right;
+        
+        oper = stmt.expression.middle;
+            
+        Calculator calculator;
+        is_true = calculator.evaluate_basic_expression<double>(left_operand, right_operand, oper);
+    }
 
     if (is_true)
     {
@@ -404,8 +453,7 @@ gvl::Interpreter::Error gvl::Interpreter::execute_block(Interpreter& interpreter
             return execute_block(interpreter, stmt);
     }
 
-
-    return gvl::Interpreter::Error();
+    return gvl::Interpreter::Info();
 }
 
 static void add_element_in_array(const gvl::Interpreter& interpreter, gvl::VarLike& array, const gvl::Token& element)
@@ -414,7 +462,7 @@ static void add_element_in_array(const gvl::Interpreter& interpreter, gvl::VarLi
         array.array_elements.push_back(element);
 } 
 
-gvl::Interpreter::Error gvl::Interpreter::execute_array_init(Interpreter& interpreter, const Statement& stmt)
+gvl::Interpreter::Info gvl::Interpreter::execute_array_init(Interpreter& interpreter, const Statement& stmt)
 {
     VarLike array;
     array.name = stmt.line[1];
@@ -426,7 +474,7 @@ gvl::Interpreter::Error gvl::Interpreter::execute_array_init(Interpreter& interp
 
     if (!interpreter.variables.contains(array.name))
     {
-        if (stmt.expression.left.compare("array_at") == 0)
+        if (stmt.expression.left.compare("$array_at") == 0)
         {
             const auto& right_side_array_name = 
             interpreter.get_var_map().at(stmt.expression.middle).array_elements.at(std::stoi(index));
@@ -434,7 +482,7 @@ gvl::Interpreter::Error gvl::Interpreter::execute_array_init(Interpreter& interp
             for (const auto& array_elem : interpreter.get_var_map().at(right_side_array_name).array_elements)
                 add_element_in_array(interpreter, array, get_varlike_value(interpreter, array_elem));
         }
-        else if (stmt.expression.left.compare("array_pop") == 0)
+        else if (stmt.expression.left.compare("$array_pop") == 0)
         {
             const auto& right_side_array_name = interpreter.get_var_map().at(stmt.expression.middle).array_elements.back();
             
@@ -456,10 +504,10 @@ gvl::Interpreter::Error gvl::Interpreter::execute_array_init(Interpreter& interp
             interpreter.tmp_var_names.push_back(array.name);
     }
 
-    return gvl::Interpreter::Error();
+    return gvl::Interpreter::Info();
 }
 
-gvl::Interpreter::Error gvl::Interpreter::execute_array_set(Interpreter& interpreter, const Statement& stmt)
+gvl::Interpreter::Info gvl::Interpreter::execute_array_set(Interpreter& interpreter, const Statement& stmt)
 {
     const VarLike& target_array = interpreter.get_var_map().at(stmt.expression.left);
 
@@ -472,18 +520,18 @@ gvl::Interpreter::Error gvl::Interpreter::execute_array_set(Interpreter& interpr
         const_cast<std::vector<Token>&> (target_array_values).at(std::stoi(idx)) = set_value;
     }
 
-    return gvl::Interpreter::Error();
+    return gvl::Interpreter::Info();
 }
 
-gvl::Interpreter::Error gvl::Interpreter::execute_array_append(Interpreter& interpreter, const Statement& stmt)
+gvl::Interpreter::Info gvl::Interpreter::execute_array_append(Interpreter& interpreter, const Statement& stmt)
 {
     VarLike& varlike = interpreter.variables.at(stmt.line[1]);
     varlike.array_elements.push_back(get_varlike_value(interpreter, stmt.expression.middle));
 
-    return gvl::Interpreter::Error();
+    return gvl::Interpreter::Info();
 }
 
-gvl::Interpreter::Error gvl::Interpreter::execute_array_pop(Interpreter& interpreter, const Statement& stmt)
+gvl::Interpreter::Info gvl::Interpreter::execute_array_pop(Interpreter& interpreter, const Statement& stmt)
 {
     VarLike& varlike = interpreter.variables.at(stmt.line[1]);
     const auto& result = get_varlike_value(interpreter, stmt.expression.middle);
@@ -501,7 +549,49 @@ gvl::Interpreter::Error gvl::Interpreter::execute_array_pop(Interpreter& interpr
         varlike.array_elements.pop_back();
     }
 
-    return gvl::Interpreter::Error();
+    return gvl::Interpreter::Info();
+}
+
+gvl::Interpreter::Info gvl::Interpreter::execute_call_func(Interpreter& interpreter, const Statement& stmt)
+{
+    const std::unordered_set<std::pair<TokenSv, Statement*>, HashTokenStmtPair>& udfs(interpreter.get_ud_funcs());
+
+    auto it = std::find_if(udfs.begin(), udfs.end(), 
+        [stmt](const std::pair<TokenSv, Statement*>& p){ return p.first.compare(stmt.line[1]) == 0; });
+    
+
+    if (it != udfs.end())
+    {
+        Statement& func_stmt = *(it->second);
+        std::unordered_map<Token, Token> params;
+
+        if (!stmt.expression.left.empty())
+            params.insert(std::pair<Token, Token>(func_stmt.expression.left, stmt.expression.left));
+        if (!stmt.expression.middle.empty())
+            params.insert(std::pair<Token, Token>(func_stmt.expression.middle, stmt.expression.middle));
+        if (!stmt.expression.right.empty())
+            params.insert(std::pair<Token, Token>(func_stmt.expression.right, stmt.expression.right)); 
+
+        for (Statement& sub_stmt : func_stmt.main_body)
+        {
+            for (Token& token : sub_stmt.line)
+            {
+                if (params.contains(token))
+                    token = params[token];
+            }
+
+            if (params.contains(sub_stmt.expression.left))
+                sub_stmt.expression.left = params[sub_stmt.expression.left];
+            if (params.contains(sub_stmt.expression.left))
+                sub_stmt.expression.middle = params[sub_stmt.expression.middle];
+            if (params.contains(sub_stmt.expression.right))
+                sub_stmt.expression.right = params[sub_stmt.expression.right];            
+        }
+        
+        interpreter.execute_block(interpreter, *(it->second));
+    }
+
+    return gvl::Interpreter::Info();
 }
 
 void gvl::Interpreter::clear_scope(gvl::Interpreter& interpreter, std::vector<TokenSv>& var_names)
@@ -555,6 +645,7 @@ gvl::Interpreter::Interpreter(const Program& program)
         type == StatementType::ARRAY_POP ? f = execute_array_pop :
         type == StatementType::ARRAY_SET ? f = execute_array_set :
         type == StatementType::ASSIGN ? f = execute_assign :
+        type == StatementType::CALL_FUNC ? f = execute_call_func :
         type == StatementType::PRINT || stmt.type == StatementType::PRINTLN ? f = execute_print_related :
         is_read_related(stmt.type) ? f = execute_read_related :
         type == StatementType::IF || type == StatementType::WHILE ? f = execute_block : f = nullptr;
@@ -567,7 +658,9 @@ void gvl::Interpreter::execute_program()
 {
     for (const auto& p : this->exe_plan)
     {
-        if (p.second)
+        if (p.first.type == StatementType::DEF_FUNC)
+            this->ud_funcs.insert(std::pair<TokenSv, Statement*>(const_cast<Token&>(p.first.line[1]), const_cast<Statement*>(&p.first)));
+        else if (p.second)
             p.second(*this, p.first);
         else
             return;

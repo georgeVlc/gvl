@@ -1,12 +1,12 @@
-var[] array = [ 10 50 20 ]
+var[] $array = [ 10 50 20 ]
 var max = 0
 
 var i = 0
-var limit = array_len array
+var limit = $array_len $array
 limit = limit - 1
 
 while i <= limit {
-    var element = array_at array i
+    var element = $array_at $array i
     if element > max {
         max = element
     }

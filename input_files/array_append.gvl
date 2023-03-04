@@ -3,5 +3,5 @@ var[] b = [ a 4 ]
 
 var[] c = []
 var element = 10
-array_append c element
-array_append c a
+$array_append c element
+$array_append c a

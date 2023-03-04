@@ -4,4 +4,4 @@ var ab = a + b
 
 var[] strs = [ a b ab ]
 
-var element = array_at strs 2
+var element = $array_at strs 2

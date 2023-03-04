@@ -1,0 +1,33 @@
+var a = b * c + 1
+a = a - a
+const pi = 3.14
+var[] ints_array = [ 1 2 3 ] 
+var element = array_at ints_array 0
+element = array_at ints_array 2
+
+print a b c
+println a b c d
+print a
+var str = 'Hello' space 'World'
+var str_2 = str + 'a2a_'
+
+var x = 0
+var o = 0
+var y = 0.0
+var z = ''
+
+readint x o
+readfloat y
+readstr z
+
+while x != o {
+    readint x o
+    println x o
+}
+
+if x == 0 {
+    println 'X' space 'equal'
+}
+else {
+    println 'X' space 'unequal'
+}

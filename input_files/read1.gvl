@@ -22,6 +22,6 @@ while i < limit {
     
     print nl
     
-    array_append a element
+    $array_append a element
     i = i + 1
 }

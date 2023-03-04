@@ -33,6 +33,9 @@ namespace gvl
         ARRAY_APPEND,
         ARRAY_SET,
         ARRAY_POP,
+        CALL_FUNC,
+        DEF_FUNC,
+        RETURN,
         NONE
     };
 

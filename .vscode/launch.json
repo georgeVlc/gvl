@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/gvl",
-            "args": ["input_files/while.gvl"],
+            "args": ["input_files/else.gvl"],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
             "environment": [],

@@ -61,9 +61,9 @@ static gvl::StatementType set_statement_type(const std::vector<gvl::Token>& toke
     
     tokens.front() == "var" ? type = StatementType::INIT :
     tokens.front() == "var[]" ? type = StatementType::ARRAY_INIT :
-    tokens.front() == "array_append" ? type = StatementType::ARRAY_APPEND :
-    tokens.front() == "array_set" ? type = StatementType::ARRAY_SET :
-    tokens.front() == "array_pop" ? type = StatementType::ARRAY_POP :
+    tokens.front() == "$array_append" ? type = StatementType::ARRAY_APPEND :
+    tokens.front() == "$array_set" ? type = StatementType::ARRAY_SET :
+    tokens.front() == "$array_pop" ? type = StatementType::ARRAY_POP :
     tokens.front() == "const" ? type = StatementType::CONST :
     tokens.front() == "print" ? type = StatementType::PRINT :
     tokens.front() == "println" ? type = StatementType::PRINTLN :
@@ -76,6 +76,9 @@ static gvl::StatementType set_statement_type(const std::vector<gvl::Token>& toke
     tokens.front() == "else" ? type = StatementType::ELSE :
     tokens.front() == "while" ? type = StatementType::WHILE :
     tokens.front() == "}" ? type = StatementType::BRACKET :
+    tokens.front() == "function" ? type = StatementType::DEF_FUNC :
+    tokens.front() == "call" ? type = StatementType::CALL_FUNC :
+    tokens.front() == "return" ? type = StatementType::RETURN :
     tokens[1] == "=" ? type = StatementType::ASSIGN :
     type = StatementType::NONE;
 
@@ -86,7 +89,9 @@ static gvl::StatementType set_statement_type(const std::vector<gvl::Token>& toke
 
 static bool statement_is_block(gvl::StatementType type)
 {
-    return type == gvl::StatementType::IF || type == gvl::StatementType::ELSE || type == gvl::StatementType::WHILE;
+    return 
+        type == gvl::StatementType::IF || type == gvl::StatementType::ELSE || 
+        type == gvl::StatementType::WHILE || type == gvl::StatementType::DEF_FUNC;
 }
 
 static gvl::Expression set_statement_expression(gvl::StatementType type, const std::vector<gvl::Token>& tokens)
@@ -123,7 +128,7 @@ static gvl::Expression set_statement_expression(gvl::StatementType type, const s
 
         if (sz == 5)
         {
-            if (tokens[3].compare("array_pop") == 0)
+            if (tokens[3].compare("$array_pop") == 0)
             {
                 std::cout << "true" << "\n";
                 expression.left = tokens[3];
@@ -133,7 +138,7 @@ static gvl::Expression set_statement_expression(gvl::StatementType type, const s
         }
         else if (sz >= 6)
         {
-            if (tokens[3].compare("array_at") == 0)
+            if (tokens[3].compare("$array_at") == 0)
             {
                 expression.left = tokens[3];
                 expression.middle = tokens[4];
@@ -172,6 +177,36 @@ static gvl::Expression set_statement_expression(gvl::StatementType type, const s
             expression.right = tokens[3];
         }
     }
+    else if (type == gvl::StatementType::DEF_FUNC)  // function name : arg1 arg2 arg3 {
+    {
+        const std::size_t sz = tokens.size();
+
+        if (sz >= 4)
+        {
+            expression.left = tokens[3];
+            if (sz >= 5)
+            {
+                expression.middle = tokens[4];
+                if (sz >= 6)
+                    expression.right = tokens[5];
+            }
+        }
+    }
+    else if (type == gvl::StatementType::CALL_FUNC)     // call name arg1 arg2 arg3
+    {
+        const std::size_t sz = tokens.size();
+        
+        if (sz >= 3)
+        {
+            expression.left = tokens[2];
+            if (sz >= 4)
+            {
+                expression.middle = tokens[3];
+                if (sz >= 5)
+                    expression.right = tokens[4];
+            }
+        }
+    }
     else if (type != gvl::StatementType::ELSE && type != gvl::StatementType::BRACKET)
     {
         expression.left = tokens[1];
@@ -188,9 +223,9 @@ static gvl::Expression set_statement_expression(gvl::StatementType type, const s
     return expression;
 }
 
-static std::array<std::vector<gvl::Statement>, 2> set_statement_bodies(const std::vector<std::string>& lines, auto& it)
+static std::vector<gvl::Statement> set_statement_body(const std::vector<std::string>& lines, auto& it)
 {
-    std::array<std::vector<gvl::Statement>, 2> bodies;
+    std::vector<gvl::Statement> body;
     std::vector<std::string> sub_lines;
     std::size_t cbracket_cnt = 1;
     ++it;
@@ -209,10 +244,10 @@ static std::array<std::vector<gvl::Statement>, 2> set_statement_bodies(const std
         sub_lines.push_back(*it);
     }
 
-    gvl::Parser p1(sub_lines, nullptr);
-    bodies[0] = p1.get_parsed_program().statements;
+    gvl::Parser p(sub_lines, nullptr);
+    body = p.get_parsed_program().statements;
     
-    return bodies;
+    return body;
 }
 
 gvl::Parser::Parser(const std::vector<std::string>& lines, const std::array<std::string, gvl::args_max_num>* args)
@@ -234,12 +269,7 @@ gvl::Parser::Parser(const std::vector<std::string>& lines, const std::array<std:
         stmt.expression = set_statement_expression(stmt.type, stmt.line);
 
         if (statement_is_block(stmt.type))
-        {
-            const auto& bodies(set_statement_bodies(lines, it));
-
-            stmt.main_body = bodies[0];
-            stmt.second_body = bodies[1];
-        }
+            stmt.main_body = set_statement_body(lines, it);
 
         this->parsed_program.statements.push_back(stmt);
     }

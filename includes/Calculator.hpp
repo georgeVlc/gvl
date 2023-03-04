@@ -106,7 +106,7 @@ class Calculator
         }
 
         template <typename T>
-        static bool evaluate_basic_bool_expression(std::string_view left_operand, std::string_view right_operand, std::string_view oper)
+        static bool evaluate_basic_expression(std::string_view left_operand, std::string_view right_operand, std::string_view oper)
         {
             T l = T();
             T r = T();
@@ -120,7 +120,6 @@ class Calculator
                 iss >> r;
             }
             
-
             if (oper == "==")
                 return l == r;
             else if (oper == ">=")
@@ -132,7 +131,17 @@ class Calculator
             else if (oper == "<")
                 return l < r;
             else
-                throw Exception{ "bad" };
+                throw Exception{};
+        }
+
+        static bool evaluate_basic_bool_expression(std::string_view left_operand, std::string_view right_operand, std::string_view oper)
+        {
+            bool left_as_bool = left_operand.compare("true") ? true : false;
+            bool right_as_bool = right_operand.empty() ? left_as_bool : right_operand.compare("true") ? true : false;
+            
+            if (oper.compare("and") == 0)
+                return left_as_bool && right_as_bool;
+            return left_as_bool || right_as_bool;
         }
 
         template <typename T>
