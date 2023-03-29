@@ -3,8 +3,10 @@
 
 #include <string>
 #include <string_view>
+#include <sstream>
 #include <vector>
 #include <array>
+
 
 namespace gvl
 {
@@ -61,6 +63,28 @@ namespace gvl
 
         StmtContainer statements;
         std::array<Token, args_max_num> args;
+    };
+
+    class Error
+    {
+        public:
+
+            Error(const std::string& error, std::size_t line_no)
+               : error_msg(error), error_line_no(line_no)
+            {}
+
+            virtual std::string what() const 
+            {
+                std::ostringstream oss;
+                oss << error_msg << ", at line: " << error_line_no;
+                return oss.str(); 
+            }
+
+
+        protected:
+
+            std::string error_msg;
+            std::size_t error_line_no;
     };
 }
 

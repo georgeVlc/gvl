@@ -10,6 +10,15 @@
 #include <string_view>
 
 
+std::size_t gvl::Parser::line_no = 1;
+
+
+static bool valid_stmt_tokens_no(std::uint32_t low, std::uint32_t high, std::uint32_t sz)
+{
+    bool is_valid = (sz < low || sz > high) ? false : true;
+    return is_valid;
+}
+
 std::istringstream gvl::Parser::read_file_content(const std::string& file_name, std::vector<char>& buffer)
 {
     std::ifstream inob(file_name, std::ios_base::in | std::ios::binary);
@@ -56,33 +65,37 @@ static std::vector<std::string> split_string_into_vector(const std::string& str)
 
 static gvl::StatementType set_statement_type(const std::vector<gvl::Token>& tokens)
 {
-    using gvl::StatementType;
-    StatementType type = StatementType::NONE;
-    
-    tokens.front() == "var" ? type = StatementType::INIT :
-    tokens.front() == "var[]" ? type = StatementType::ARRAY_INIT :
-    tokens.front() == "$array_append" ? type = StatementType::ARRAY_APPEND :
-    tokens.front() == "$array_set" ? type = StatementType::ARRAY_SET :
-    tokens.front() == "$array_pop" ? type = StatementType::ARRAY_POP :
-    tokens.front() == "const" ? type = StatementType::CONST :
-    tokens.front() == "print" ? type = StatementType::PRINT :
-    tokens.front() == "println" ? type = StatementType::PRINTLN :
-    tokens.front() == "readchar" ? type = StatementType::READCHAR :
-    tokens.front() == "readint" ? type = StatementType::READINT :
-    tokens.front() == "readfloat" ? type = StatementType::READFLOAT :
-    tokens.front() == "readstr" ? type = StatementType::READSTR :
-    tokens.front() == "readln" ? type = StatementType::READLN : 
-    tokens.front() == "if" ? type = StatementType::IF :
-    tokens.front() == "else" ? type = StatementType::ELSE :
-    tokens.front() == "while" ? type = StatementType::WHILE :
-    tokens.front() == "}" ? type = StatementType::BRACKET :
-    tokens.front() == "function" ? type = StatementType::DEF_FUNC :
-    tokens.front() == "call" ? type = StatementType::CALL_FUNC :
-    tokens.front() == "return" ? type = StatementType::RETURN :
-    tokens[1] == "=" ? type = StatementType::ASSIGN :
-    type = StatementType::NONE;
+    if (tokens.size() == 1)
+        throw gvl::Parser::ParseTimeError{ "invalid statement type", gvl::Parser::get_line_no() };
 
-    assert(type != StatementType::NONE);
+    using gvl::StatementType;
+    StatementType type = 
+    
+    tokens.front() == "var" ? StatementType::INIT :
+    tokens.front() == "var[]" ? StatementType::ARRAY_INIT :
+    tokens.front() == "$array_append" ? StatementType::ARRAY_APPEND :
+    tokens.front() == "$array_set" ? StatementType::ARRAY_SET :
+    tokens.front() == "$array_pop" ? StatementType::ARRAY_POP :
+    tokens.front() == "const" ? StatementType::CONST :
+    tokens.front() == "print" ? StatementType::PRINT :
+    tokens.front() == "println" ? StatementType::PRINTLN :
+    tokens.front() == "readchar" ? StatementType::READCHAR :
+    tokens.front() == "readint" ? StatementType::READINT :
+    tokens.front() == "readfloat" ? StatementType::READFLOAT :
+    tokens.front() == "readstr" ? StatementType::READSTR :
+    tokens.front() == "readln" ? StatementType::READLN : 
+    tokens.front() == "if" ? StatementType::IF :
+    tokens.front() == "else" ? StatementType::ELSE :
+    tokens.front() == "while" ? StatementType::WHILE :
+    tokens.front() == "}" ? StatementType::BRACKET :
+    tokens.front() == "function" ? StatementType::DEF_FUNC :
+    tokens.front() == "call" ? StatementType::CALL_FUNC :
+    tokens.front() == "return" ? StatementType::RETURN :
+    tokens[1] == "=" ? StatementType::ASSIGN : StatementType::NONE;
+
+    if (type == StatementType::NONE)
+        throw gvl::Parser::ParseTimeError{ "invalid statement type", gvl::Parser::get_line_no() };
+
 
     return type;
 }
@@ -103,6 +116,9 @@ static gvl::Expression set_statement_expression(gvl::StatementType type, const s
         expression.left = tokens[2];
         const std::size_t sz = tokens.size();
 
+        if (!valid_stmt_tokens_no(3, 5, sz))
+            throw gvl::Parser::ParseTimeError{ "invalid number of tokens", gvl::Parser::get_line_no() };
+
         if (sz >= 4)
         {
             expression.middle = tokens[3];
@@ -115,6 +131,9 @@ static gvl::Expression set_statement_expression(gvl::StatementType type, const s
         expression.left = tokens[3];
         const std::size_t sz = tokens.size();
 
+        if (!valid_stmt_tokens_no(4, 6, sz))
+            throw gvl::Parser::ParseTimeError{ "invalid number of tokens", gvl::Parser::get_line_no() };
+
         if (sz >= 5)
         {
             expression.middle = tokens[4];
@@ -126,11 +145,13 @@ static gvl::Expression set_statement_expression(gvl::StatementType type, const s
     {
         const std::size_t sz = tokens.size();
 
+        if (!valid_stmt_tokens_no(4, 7, sz))
+            throw gvl::Parser::ParseTimeError{ "invalid number of tokens", gvl::Parser::get_line_no() };
+
         if (sz == 5)
         {
             if (tokens[3].compare("$array_pop") == 0)
             {
-                std::cout << "true" << "\n";
                 expression.left = tokens[3];
                 expression.middle = tokens[4];
                 return expression;
@@ -153,6 +174,8 @@ static gvl::Expression set_statement_expression(gvl::StatementType type, const s
                 expression.middle = tokens[5];
                 if (sz == 8)
                     expression.right = tokens[6];
+                else
+                    throw gvl::Parser::ParseTimeError{ "invalid number of tokens", gvl::Parser::get_line_no() };
             }
         }
     }
@@ -165,6 +188,9 @@ static gvl::Expression set_statement_expression(gvl::StatementType type, const s
             expression.left = tokens[1];
             expression.middle = tokens[2];
         }
+        else
+            throw gvl::Parser::ParseTimeError{ "invalid number of tokens", gvl::Parser::get_line_no() };
+
     }
     else if (type == gvl::StatementType::ARRAY_SET)
     {
@@ -176,6 +202,9 @@ static gvl::Expression set_statement_expression(gvl::StatementType type, const s
             expression.middle = tokens[2];
             expression.right = tokens[3];
         }
+        else
+            throw gvl::Parser::ParseTimeError{ "invalid number of tokens", gvl::Parser::get_line_no() };
+
     }
     else if (type == gvl::StatementType::DEF_FUNC)  // function name : arg1 arg2 arg3 {
     {
@@ -257,6 +286,12 @@ gvl::Parser::Parser(const std::vector<std::string>& lines, const std::array<std:
 
     for (auto it = lines.begin(); it != lines.end(); ++it)
     {
+        if ((*it).empty())
+        {
+            ++this->line_no;
+            continue;
+        }
+
         Statement stmt;
 
         stmt.line = split_string_into_vector(*it);
@@ -272,5 +307,6 @@ gvl::Parser::Parser(const std::vector<std::string>& lines, const std::array<std:
             stmt.main_body = set_statement_body(lines, it);
 
         this->parsed_program.statements.push_back(stmt);
+        ++this->line_no;
     }
 }

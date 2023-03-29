@@ -11,75 +11,6 @@
 #include <map>
 
 
-std::ostream& operator<<(std::ostream& out, const gvl::StatementType value)
-{
-    static std::map<gvl::StatementType, std::string> strings;
-    if (strings.size() == 0)
-    {
-        #define INSERT_ELEMENT(p) strings[p] = #p
-                INSERT_ELEMENT(gvl::StatementType::READCHAR);     
-                INSERT_ELEMENT(gvl::StatementType::READINT);     
-                INSERT_ELEMENT(gvl::StatementType::READFLOAT);             
-                INSERT_ELEMENT(gvl::StatementType::READSTR);     
-                INSERT_ELEMENT(gvl::StatementType::READLN);     
-                INSERT_ELEMENT(gvl::StatementType::PRINT);             
-                INSERT_ELEMENT(gvl::StatementType::PRINTLN);     
-                INSERT_ELEMENT(gvl::StatementType::INIT);     
-                INSERT_ELEMENT(gvl::StatementType::CONST);     
-                INSERT_ELEMENT(gvl::StatementType::ASSIGN);             
-                INSERT_ELEMENT(gvl::StatementType::IF);             
-                INSERT_ELEMENT(gvl::StatementType::ELSE);     
-                INSERT_ELEMENT(gvl::StatementType::WHILE);
-                INSERT_ELEMENT(gvl::StatementType::BRACKET);
-                INSERT_ELEMENT(gvl::StatementType::ARRAY_INIT);   
-                INSERT_ELEMENT(gvl::StatementType::ARRAY_APPEND);     
-                INSERT_ELEMENT(gvl::StatementType::ARRAY_POP);     
-                INSERT_ELEMENT(gvl::StatementType::ARRAY_SET);     
-                INSERT_ELEMENT(gvl::StatementType::DEF_FUNC);     
-                INSERT_ELEMENT(gvl::StatementType::CALL_FUNC);     
-                INSERT_ELEMENT(gvl::StatementType::RETURN);     
-                INSERT_ELEMENT(gvl::StatementType::NONE);                     
-        #undef INSERT_ELEMENT
-    }   
-
-    return out << strings[value];
-}
-
-std::ostream& operator<<(std::ostream& out, const gvl::Statement& stmt)
-{
-    out << "----------------------------------------------------------\n";
-
-    out << stmt.type << "\n";
-
-    for (const auto& token : stmt.line)
-        out << token << "|";
-
-    out << "\n";
-
-    out << stmt.expression.left << "|" << stmt.expression.middle << "|" << stmt.expression.right << "\n";
-    
-    if (!stmt.main_body.empty())
-    {
-        out << "\t\t++++++++++++++++-PRINTING BODY-+++++++++++++++++\n";
-        for (const auto& sub_stmt : stmt.main_body)
-        {
-            out << sub_stmt << "\n";
-        }
-    }
-
-    if (!stmt.second_body.empty())
-    {
-        out << "\t\t++++++++++++++++-PRINTING BODY-+++++++++++++++++\n";
-        for (const auto& sub_stmt : stmt.second_body)
-        {
-            out << sub_stmt << "\n";
-        }
-    }
-
-    return out;
-}
-
-
 int main(int argc, char** argv)
 {
     assert(argc >= 2 && argc - 2 <= gvl::args_max_num);
@@ -94,19 +25,20 @@ int main(int argc, char** argv)
     for (int i = 2; i < argc; ++i)
         args[i] = argv[i];
 
+    try 
+    {
+        gvl::Parser parser(lines, &args);
 
-    gvl::Parser parser(lines, &args);
+        gvl::Interpreter interpreter(parser.get_parsed_program());
 
-    const auto& stmts = parser.get_parsed_program().statements;
+        interpreter.execute_program();
 
-    for (const auto& stmt : stmts)
-        std::cout << stmt << "\n";
+        interpreter.print_vars();
 
-    std::cout << "\n----------------------=EXECUTING GVL PROGRAM=----------------------\n";
+    }
+    catch (const gvl::Parser::ParseTimeError& e) 
+    {
+        std::cout << e.what() << "\n"; 
+    }
 
-    gvl::Interpreter interpreter(parser.get_parsed_program());
-    interpreter.execute_program();
-
-    std::cout << "----------------------=END OF GVL PROGRAM EXECUTION=----------------------\n";   
-    interpreter.print_vars();
 }

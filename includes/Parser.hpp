@@ -14,6 +14,17 @@ namespace gvl
     {
         public:
 
+            class ParseTimeError : public Error
+            {
+                public:
+
+                    ParseTimeError(const std::string& error_msg, std::size_t error_line_no)
+                        : Error(error_msg, error_line_no)
+                    {}
+            };
+
+        public:
+
             static std::vector<std::string> split_to_lines(std::istringstream& iss);
 
             static std::istringstream read_file_content(const std::string& file_name, std::vector<char>& buffer);
@@ -22,8 +33,12 @@ namespace gvl
 
             inline const Program& get_parsed_program() const { return this->parsed_program; }
 
+            static inline const std::size_t get_line_no() { return line_no; }
+
         private:
             
+            static std::size_t line_no;
+
             Program parsed_program;
     };
 }
