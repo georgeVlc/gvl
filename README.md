@@ -1,5 +1,5 @@
 # gvl
-A small and simple, both dynamically and strongly typed interpreted language written solely in C++ from scratch. Still under development, long way to go.
+A very small and simple, dynamically typed, interpreted language written solely in C++20(ish) from scratch.
 
 So far gvl supports the very basics such as variable/constant initialization, variable assignment statements, standard I/O operations, if and while statements.
 
@@ -10,4 +10,4 @@ Supported data types include: int, double, string, bool, array
 
 Examples will be added once the project is relatively finished, but for now most of the '.gvl' files in input_files/ demonstrate valid gvl code.
 
-There is no real error detection/recovery yet, as far as syntax errors and run-time errors are conserned, but i'm working on providing one using the flex&yacc combo in the future.
+So far there is some minimal syntx error detection but no run-time error checking yet.
